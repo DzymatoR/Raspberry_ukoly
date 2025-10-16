@@ -2,6 +2,10 @@ from gpiozero import LED
 from signal import pause
 from time import sleep
 
+import os
+os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
+
+
 # LED připojena na pin BCM 14 (fyzický pin 8)
 led = LED(14)
 
