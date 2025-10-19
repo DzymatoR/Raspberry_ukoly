@@ -1,8 +1,7 @@
 import gpiozero
-import time 
 from time import sleep
 
-led = gpiozero.LED(14)
+led = gpiozero.LED(15)
 
 for i in range(5):
     led.on()
@@ -10,4 +9,4 @@ for i in range(5):
     sleep(1)
     led.off()
     print("LED OFF 💤" )
-
+    sleep(1)
