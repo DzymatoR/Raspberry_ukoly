@@ -2,6 +2,7 @@ import sqlite3
 from time import sleep
 import board
 import adafruit_dht
+import csv
 
 # Seznam výsledků měření (sbíráme více záznamů před uložením do DB)
 result = []
@@ -33,6 +34,18 @@ def read_sensor():
     dhtDevice.exit()
 
     return result
+
+def uloz_CSV(sensor_data, filename='DU_lekce_4/sensor_data.csv'):
+    """
+    Uloží data (seznam slovníků) do CSV souboru.
+    """
+    with open(filename, mode='w', newline='', encoding="utf-8") as csvfile:
+        fieldnames = ['temperature', 'humidity']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for entry in sensor_data:
+            writer.writerow(entry)
 
 def insert_data(sensor_data):
     """
@@ -82,4 +95,5 @@ if __name__ == "__main__":
     insert_data(data)
     fetch_data()
     prumer_hodnot()
+    uloz_CSV(data)
 
