@@ -3,22 +3,25 @@ from time import sleep
 import board
 import adafruit_dht
 
-# data = [
-#     {"temperature": 22.5, "humidity": 45.0},
-#     {"temperature": 23.0, "humidity": 50.0},
-#     {"temperature": 21.5, "humidity": 55.0}     
-#     ]
-
+# Seznam výsledků měření (sbíráme více záznamů před uložením do DB)
 result = []
 
 def read_sensor():
+    """
+    Přečte hodnoty z DHT11 senzoru několikráte (5x) a uloží je do seznamu result.
+    Vrací seznam slovníků s klíči 'temperature' a 'humidity'.
+    """
     
+    # Inicializace DHT senzoru na pinu D4
     dhtDevice = adafruit_dht.DHT11(board.D4)
+    # Načtení jednorázových hodnot (může být None pokud senzor neodpoví)
     temperature_c = dhtDevice.temperature
     humidity = dhtDevice.humidity
 
+    # Počet opakování (pouze pro výpis zbývajících měření)
     counter = 6
 
+    # Pro účely cvičení opakujeme 5x a ukládáme stejné aktuální hodnoty
     for i in range(5): 
         data = {"temperature": temperature_c, "humidity": humidity}
         result.append(data)
@@ -26,11 +29,16 @@ def read_sensor():
         print(f"Zbývá :{counter} měření")
         sleep(1)
 
+    # Ukončí komunikaci se senzorem (u adafruit_dht některé verze vyžadují exit)
     dhtDevice.exit()
 
     return result
 
 def insert_data(sensor_data):
+    """
+    Vloží data (seznam slovníků) do SQLite databáze.
+    Pokud tabulka neexistuje, vytvoří ji.
+    """
     with sqlite3.connect('DU_lekce_4/sensor.db') as conn:
         conn.execute('''
         CREATE TABLE IF NOT EXISTS sensor_data (
@@ -40,6 +48,7 @@ def insert_data(sensor_data):
             humidity REAL)
         ''')
 
+        # Vloží každý záznam postupně
         for entry in sensor_data:
             conn.execute('''
             INSERT INTO sensor_data (temperature, humidity) VALUES (?, ?)
@@ -49,6 +58,9 @@ def insert_data(sensor_data):
         conn.commit()
 
 def fetch_data():
+    """
+    Načte a vytiskne posledních 5 záznamů z tabulky sensor_data.
+    """
     with sqlite3.connect('DU_lekce_4/sensor.db') as conn:
         cursor = conn.execute('SELECT * FROM sensor_data ORDER BY id DESC lIMIT 5')
         rows = cursor.fetchall()
@@ -56,6 +68,9 @@ def fetch_data():
             print(row)
 
 def prumer_hodnot():
+    """
+    Spočítá a vytiskne průměrnou teplotu a vlhkost ze všech záznamů v DB.
+    """
     with sqlite3.connect('DU_lekce_4/sensor.db') as conn:
         cursor = conn.execute('SELECT AVG(temperature), AVG(humidity) FROM sensor_data')
         avg_temp, avg_hum = cursor.fetchone()
