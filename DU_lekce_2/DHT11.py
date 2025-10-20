@@ -15,7 +15,7 @@ dhtDevice = adafruit_dht.DHT11(board.D4)
 blue_led = gpiozero.LED(14)
 yellow_led = gpiozero.LED(15)
 red_led = gpiozero.LED(18)
-korekce = 30
+korekce = 0 
 
 # you can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
 # This may be necessary on a Linux single board computer like the Raspberry Pi,
