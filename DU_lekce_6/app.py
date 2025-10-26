@@ -11,9 +11,17 @@ dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
 
 @app.get("/api/data")
 def read_dht():
-    t = dht.temperature
-    h = dht.humidity
-    return {"temperature": float(t), "humidity": float(h)}
+
+    try:
+        # Senzor potřebuje čas na inicializaci
+        time.sleep(2)
+        t = dht.temperature
+        h = dht.humidity
+        return {"temperature": float(t), "humidity": float(h)}
+
+    except RuntimeError as error:
+        print(f"Chyba při čtení senzoru: {error.args[0]}")
+        return {"temperature": None, "humidity": None}
 
 
 @app.get("/")
