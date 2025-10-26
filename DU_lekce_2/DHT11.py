@@ -1,4 +1,3 @@
-
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
@@ -10,12 +9,15 @@ import adafruit_dht
 
 import gpiozero
 
+# pip install adafruit-circuitpython-dht
+# pip install board
+
 # Initial the dht device, with data pin connected to:
 dhtDevice = adafruit_dht.DHT11(board.D4)
 blue_led = gpiozero.LED(14)
 yellow_led = gpiozero.LED(15)
 red_led = gpiozero.LED(18)
-korekce = 0 
+korekce = 0
 
 # you can pass DHT22 use_pulseio=False if you wouldn't like to use pulseio.
 # This may be necessary on a Linux single board computer like the Raspberry Pi,
@@ -28,19 +30,18 @@ while True:
         temperature_c = dhtDevice.temperature - korekce
         humidity = dhtDevice.humidity
         print(f"Temp: {temperature_c:.1f} C    Humidity: {humidity}% ")
- 
 
         if temperature_c < 0:
             blue_led.on()
         else:
             blue_led.off()
-            
+
         for i in range(int(temperature_c // 10)):
             yellow_led.on()
             time.sleep(0.2)
             yellow_led.off()
             time.sleep(0.2)
-        
+
         for j in range(int(temperature_c % 10)):
             red_led.on()
             time.sleep(0.2)
@@ -57,6 +58,3 @@ while True:
         raise error
 
     time.sleep(2.0)
-
-
-
