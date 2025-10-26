@@ -1,6 +1,3 @@
-
-
-
 from gpiozero import LED
 from signal import pause
 from time import sleep
