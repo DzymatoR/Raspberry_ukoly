@@ -1,0 +1,29 @@
+Na RPi je potřeba nainstalovat Cloudflare následujícím způsobem:
+
+https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/
+
+
+1) odpoj se z virtuálního prostředí (deactivate v terminálu)
+2) na https://pkg.cloudflare.com/index.html postupuj podle instrukcí k Any Debian Based Distribution (Recommended)
+
+    # Add cloudflare gpg key
+    sudo mkdir -p --mode=0755 /usr/share/keyrings
+    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+
+    # Add this repo to your apt repositories
+    echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
+
+    # install cloudflared
+    sudo apt-get update && sudo apt-get install cloudflared
+
+3) instalaci ověříme pomocí cloudflared -h
+
+4) spusť .venv (příkaz . .venv/bin/activate )a Flask aplikaci. Zjisti localhost a použij ho v následujícím příkazu
+
+5) Spusť Quick tunnel 
+
+    cloudflared tunnel --url http://localhost:5000
+
+    Najdi vygenerovaný link (po každém spuštění tunelu bude jiný!) a otestuj
+
+    příklad Quick tunelu https://cases-mining-stylish-instrument.trycloudflare.com/
