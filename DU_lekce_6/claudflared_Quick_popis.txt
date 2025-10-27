@@ -26,4 +26,4 @@ https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-
 
     Najdi vygenerovaný link (po každém spuštění tunelu bude jiný!) a otestuj
 
-    příklad Quick tunelu https://cases-mining-stylish-instrument.trycloudflare.com/
+    příklad Quick tunelu https://tires-novel-consciousness-hardware.trycloudflare.com/
