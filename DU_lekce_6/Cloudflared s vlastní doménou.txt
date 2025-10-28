@@ -1,3 +1,7 @@
 1) zaregistrovat se na Cloudflare
 2) přidat doménu 
-3)
+3)nakonfigurovat tunel
+
+https://raspberry.jakub-smid.cz/
+
+
