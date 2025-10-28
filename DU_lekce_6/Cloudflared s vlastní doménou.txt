@@ -2,6 +2,6 @@
 2) přidat doménu 
 3)nakonfigurovat tunel
 
-https://raspberry.jakub-smid.cz/
+https://rpdash.jakub-smid.cz/
 
 
