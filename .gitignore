@@ -1,0 +1,13 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Databáze - nechcete verzovat data ze senzoru
+DU_lekce_8/sensor_data.db
+*.db
+
+# Logs
+*.log
