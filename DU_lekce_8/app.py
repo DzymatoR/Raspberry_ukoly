@@ -72,8 +72,8 @@ def read_dht():
 
 @app.get("/api/data")
 def api_data():
-    data = read_dht()
-    uloz_data_do_SQL([data])
+    # data = read_dht()
+    uloz_data_do_SQL([read_dht()])
 
     # print(read_dht())
     # print(fetch_data())
