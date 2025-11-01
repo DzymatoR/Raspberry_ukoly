@@ -37,7 +37,6 @@ def uloz_data_do_SQL(sensor_data):
             """,
                 (entry["temperature"], entry["humidity"]),
             )
-            sleep(1)
 
         conn.commit()
 
@@ -48,19 +47,17 @@ def fetch_data():
     """
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.execute(
-            "SELECT temperature, humidity FROM sensor_data ORDER BY id DESC LIMIT 1"
+            "SELECT temperature, humidity FROM sensor_data ORDER BY id DESC lIMIT 1"
         )
         rows = cursor.fetchall()
         if rows:
-            return {"temperature": rows[0][1], "humidity": rows[0][0]}
+            return {"temperature": rows[0][0], "humidity": rows[0][1]}
         else:
             print("Žádná data v databázi.")
             return []
 
 
-@app.get("/api/data")
 def read_dht():
-
     try:
         # Senzor potřebuje čas na inicializaci
         time.sleep(2)
@@ -73,10 +70,15 @@ def read_dht():
         return {"temperature": None, "humidity": None}
 
 
-# def api_data():
-#     data = read_dht()
-#     uloz_data_do_SQL([data])
-#     return fetch_data()
+@app.get("/api/data")
+def api_data():
+    data = read_dht()
+    uloz_data_do_SQL([data])
+
+    # print(read_dht())
+    # print(fetch_data())
+
+    return fetch_data()
 
 
 @app.get("/")
