@@ -5,7 +5,7 @@ import board
 import sqlite3
 from time import sleep
 
-
+# Inicializace Flask aplikace
 app = Flask(__name__)
 
 # Na RPi4/5 je často nutné use_pulseio=False
@@ -42,9 +42,8 @@ def uloz_data_do_SQL(sensor_data):
 
 
 def fetch_data():
-    """
-    Načte a vytiskne posledních 5 záznamů z tabulky sensor_data.
-    """
+
+    # Načte poslední záznam z tabulky sensor_data.
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.execute(
             "SELECT temperature, humidity FROM sensor_data ORDER BY id DESC lIMIT 1"
@@ -72,20 +71,19 @@ def read_dht():
 
 @app.get("/api/data")
 def api_data():
-    # data = read_dht()
-    uloz_data_do_SQL([read_dht()])
 
-    # print(read_dht())
-    # print(fetch_data())
+    uloz_data_do_SQL([read_dht()])  # Uložení dat přímo po načtení ze senzoru
 
-    return fetch_data()
+    return fetch_data()  # Vrací poslední data z databáze
 
 
 @app.get("/")
 def home():
-    data = read_dht()
-    uloz_data_do_SQL([data])
-    databaze_data = fetch_data()
+    data = read_dht()  # Načtení dat ze senzoru
+    uloz_data_do_SQL([data])  # Uložení dat do databáze
+    databaze_data = fetch_data()  # Načtení posledních dat z databáze
+
+    # Renderování šablony s daty
     return render_template(
         "index.html",
         temperature=databaze_data["temperature"],
