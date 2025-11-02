@@ -3,46 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DHT11 dashboard</title>
-    <script src="{{url_for('static', filename='bootstrap.min.js')}}"></script>
-    <link rel="stylesheet" href="{{url_for('static', filename='bootstrap.min.css')}}">
-    <script>
-        async function fetchData() {
-            const response = await fetch('/api/data');  // Načtení celé stránky
-            const data = await response.json();
-            document.getElementById('temperature').innerHTML = `<p>${data.temperature} °C</p>`;
-            document.getElementById('humidity').innerHTML = `<p>${data.humidity} %</p>`;
+    <title>Senzorová data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        setInterval(fetchData, 5000);  // Aktualizace každých 5 sekund
-        window.onload = fetchData;  // Načtení dat při načtení stránky
         
-    </script>
-  
-
-
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-title {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .card-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .card-unit {
+            font-size: 24px;
+            color: #999;
+        }
+        
+        .card-time {
+            color: #999;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .history {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .history h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container text-center mt-5">
-        <h1>DHT11 live</h1>
-        <p>DU_8</p>
-            
-        <div class="grid gap-3 d-md-flex justify-content-md-center">
-
-            <div class="card text-bg-primary mb-3 shadow-mb" style="min-width: 15rem ;max-width: 35rem;">
-                <div class="card-header">Teplota</div>
-                <div class="card-body">
-                    <h5 id="temperature" class="card-title">{{ temperature }} °C</h5>
-                </div>
+    <div class="status">
+        <div class="status-dot"></div>
+        <span>Aktualizace každé 2s</span>
+    </div>
+    
+    <div class="container">
+        <h1>📊 Monitorování senzorů</h1>
+        
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">Teplota</div>
+                <div class="card-value" id="temperature">--</div>
+                <div class="card-unit">°C</div>
+                <div class="card-time" id="temp-time">Načítání...</div>
             </div>
-
-            <div class="card text-bg-success mb-3 shadow-mb" style="min-width: 15rem ;max-width: 35rem;">
-                <div class="card-header">Vlhkost</div>
-                <div class="card-body">
-                    <h5 id="humidity" class="card-title">{{ humidity }} %</h5>
-                </div>
+            
+            <div class="card">
+                <div class="card-title">Vlhkost</div>
+                <div class="card-value" id="humidity">--</div>
+                <div class="card-unit">%</div>
+                <div class="card-time" id="hum-time">Načítání...</div>
             </div>
         </div>
+        
+        <div class="history">
+            <h2>Historie měření</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Čas</th>
+                        <th>Teplota (°C)</th>
+                        <th>Vlhkost (%)</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <tr>
+                        <td colspan="3" class="loading">Načítání dat...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-
+    
+    <script>
+        function updateData() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Chyba:', data.error);
+                        return;
+                    }
+                    
+                    // Aktualizace hlavních karet
+                    document.getElementById('temperature').textContent = data.temperature;
+                    document.getElementById('humidity').textContent = data.humidity;
+                    document.getElementById('temp-time').textContent = data.timestamp;
+                    document.getElementById('hum-time').textContent = data.timestamp;
+                    
+                    // Aktualizace historie
+                    const historyBody = document.getElementById('history-body');
+                    historyBody.innerHTML = '';
+                    
+                    data.history.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.timestamp}</td>
+                            <td>${item.temperature}</td>
+                            <td>${item.humidity}</td>
+                        `;
+                        historyBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Chyba při načítání dat:', error);
+                });
+        }
+        
+        // První načtení při startu
+        updateData();
+        
+        // Aktualizace každou sekundu
+        setInterval(updateData, 2000);
+    </script>
 </body>
 </html>
