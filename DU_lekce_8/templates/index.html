@@ -224,6 +224,20 @@
         // První načtení při startu
         updateData();
         
+        addEventListener('load', () => {
+            const ledCheckbox = document.querySelector('.switch input[type="checkbox"]');
+            ledCheckbox.addEventListener('change', async () => {
+                const state = ledCheckbox.checked ? 'on' : 'off';
+                await fetch('/api/led', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ state })
+                });
+            });
+        });
+
      </script>
 </body>
 </html>
