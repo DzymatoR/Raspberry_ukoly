@@ -1,96 +1,123 @@
-from flask import Flask, render_template
-import time
+from flask import Flask, render_template, jsonify
+import threading
 import adafruit_dht
 import board
+import time
 import sqlite3
-from time import sleep
+from datetime import datetime
 
-# Inicializace Flask aplikace
 app = Flask(__name__)
+
+# Konfigurace databáze
+DB_NAME = "DU_lekce_8/sensor_data.db"
+
 
 # Na RPi4/5 je často nutné use_pulseio=False
 dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
 
-# Cesta k databázi
-DB_PATH = "DU_lekce_8/sensor_data.db"
+
+# Inicializace databáze
+def init_db():
+    """Inicializace databáze"""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS sensor_readings
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  timestamp TEXT,
+                  temperature REAL,
+                  humidity REAL)"""
+    )
+    conn.commit()
+    conn.close()
 
 
-def uloz_data_do_SQL(sensor_data):
-
-    # Připojení k databázi (vytvoří soubor, pokud neexistuje)
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-        CREATE TABLE IF NOT EXISTS sensor_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            temperature REAL,
-            humidity REAL)
-        """
-        )
-
-        # Vloží každý záznam postupně
-        for entry in sensor_data:
-            conn.execute(
-                """
-            INSERT INTO sensor_data (temperature, humidity) VALUES (?, ?)
-            """,
-                (entry["temperature"], entry["humidity"]),
-            )
-
-        conn.commit()
-
-
-def fetch_data():
-
-    # Načte poslední záznam z tabulky sensor_data.
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.execute(
-            "SELECT temperature, humidity FROM sensor_data ORDER BY id DESC lIMIT 1"
-        )
-        rows = cursor.fetchall()
-        if rows:
-            return {"temperature": rows[0][0], "humidity": rows[0][1]}
-        else:
-            print("Žádná data v databázi.")
-            return []
-
-
+# Čtení dat ze senzoru DHT11
 def read_dht():
     try:
         # Senzor potřebuje čas na inicializaci
         time.sleep(2)
         t = dht.temperature
         h = dht.humidity
-        return {"temperature": float(t), "humidity": float(h)}
-
+        # return {"temperature": float(t), "humidity": float(h)}
+        return t, h
     except RuntimeError as error:
         print(f"Chyba při čtení senzoru: {error.args[0]}")
         return {"temperature": None, "humidity": None}
 
 
-@app.get("/api/data")
-def api_data():
+# ukládání dat do databáze
+def save_to_database():
+    """Ukládání dat do databáze každých 10 sekund"""
+    while True:
+        try:
+            temp, hum = read_dht()
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    uloz_data_do_SQL([read_dht()])  # Uložení dat přímo po načtení ze senzoru
+            conn = sqlite3.connect(DB_NAME)
+            c = conn.cursor()
+            c.execute(
+                "INSERT INTO sensor_readings (timestamp, temperature, humidity) VALUES (?, ?, ?)",
+                (timestamp, temp, hum),
+            )
+            conn.commit()
+            conn.close()
 
-    return fetch_data()  # Vrací poslední data z databáze
+            print(f"Uloženo: {timestamp} - Teplota: {temp:.2f}°C, Vlhkost: {hum:.2f}%")
+        except Exception as e:
+            print(f"Chyba při ukládání: {e}")
+
+        time.sleep(2)  # Čekat 2 sekundy před dalším čtením
 
 
-@app.get("/")
-def home():
-    data = read_dht()  # Načtení dat ze senzoru
-    uloz_data_do_SQL([data])  # Uložení dat do databáze
-    databaze_data = fetch_data()  # Načtení posledních dat z databáze
-
-    # Renderování šablony s daty
-    return render_template(
-        "index.html",
-        temperature=databaze_data["temperature"],
-        humidity=databaze_data["humidity"],
+# Načtení posledních dat z databáze
+def get_latest_data():
+    """Načtení posledních dat z databáze"""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute(
+        "SELECT timestamp, temperature, humidity FROM sensor_readings ORDER BY id DESC LIMIT 10"
     )
+    rows = c.fetchall()
+    conn.close()
+    return rows
 
 
-# Spuštění aplikace
+# Hlavní stránka
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+# API endpoint pro získání dat
+@app.route("/api/data")
+def get_data():
+    data = get_latest_data()
+    if data:
+        latest = {
+            "timestamp": data[0][0],
+            "temperature": round(float(data[0][1]), 1),  # Převod na float
+            "humidity": round(float(data[0][2]), 1),  # Převod na float
+            "history": [
+                {
+                    "timestamp": row[0],
+                    "temperature": round(float(row[1]), 1),  # Převod na float
+                    "humidity": round(float(row[2]), 1),  # Převod na float
+                }
+                for row in data
+            ],
+        }
+        return jsonify(latest)
+    return jsonify({"error": "Žádná data"})
+
+
 if __name__ == "__main__":
-    app.run(debug=True, port=1234)
+    # Inicializace databáze
+    init_db()
+
+    # Spuštění vlákna pro ukládání dat
+    sensor_thread = threading.Thread(target=save_to_database, daemon=True)
+    sensor_thread.start()
+
+    # Spuštění Flask aplikace
+    app.run(debug=True, use_reloader=False, port=1234)
