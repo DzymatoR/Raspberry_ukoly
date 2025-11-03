@@ -112,13 +112,17 @@ def get_data():
     return jsonify({"error": "Žádná data"})
 
 
+# API endpoint pro ovládání LED
 @app.post("/api/led")
 def control_led():
+    # pokud není JSON nebo chybí klíč "state", vrátí chybu 415
     try:
         state = request.json.get("state")
     except Exception as e:
         return jsonify({"error": str(e)}), 415
 
+    # Ovládání LED
+    # pokud je stav "on", zapne LED, pokud "off", vypne LED
     if state == "on":
         led.on()
         return jsonify({"status": "LED zapnuta"})
