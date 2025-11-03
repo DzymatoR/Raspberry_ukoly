@@ -145,7 +145,7 @@
 <body>
     <div class="status">
         <div class="status-dot"></div>
-        <span>Aktualizace každé 2s</span>
+        <span>Aktualizace každé 5s</span>
     </div>
     
     <div class="container">
@@ -187,21 +187,16 @@
     </div>
     
     <script>
-        function updateData() {
-            fetch('/api/data')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        console.error('Chyba:', data.error);
-                        return;
-                    }
-                    
-                    // Aktualizace hlavních karet
+        async function updateData() {
+                    const response = await fetch('/api/data');  // Načtení celé stránky
+                    const data = await response.json();
+
+                    // Aktualizace aktuálních hodnot
                     document.getElementById('temperature').textContent = data.temperature;
                     document.getElementById('humidity').textContent = data.humidity;
                     document.getElementById('temp-time').textContent = data.timestamp;
                     document.getElementById('hum-time').textContent = data.timestamp;
-                    
+
                     // Aktualizace historie
                     const historyBody = document.getElementById('history-body');
                     historyBody.innerHTML = '';
@@ -215,17 +210,14 @@
                         `;
                         historyBody.appendChild(row);
                     });
-                })
-                .catch(error => {
-                    console.error('Chyba při načítání dat:', error);
-                });
-        }
-        
+
+                }
+                setInterval(updateData, 5000);  // Aktualizace každých 5 sekund
+
+              
         // První načtení při startu
         updateData();
         
-        // Aktualizace každou sekundu
-        setInterval(updateData, 2000);
-    </script>
+     </script>
 </body>
 </html>

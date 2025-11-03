@@ -96,13 +96,13 @@ def get_data():
     if data:
         latest = {
             "timestamp": data[0][0],
-            "temperature": round(data[0][1], 2),
-            "humidity": round(data[0][2], 2),
+            "temperature": round(float(data[0][1]), 1),  # Převod na float
+            "humidity": round(float(data[0][2]), 1),  # Převod na float
             "history": [
                 {
                     "timestamp": row[0],
-                    "temperature": round(row[1], 2),
-                    "humidity": round(row[2], 2),
+                    "temperature": round(float(row[1]), 1),  # Převod na float
+                    "humidity": round(float(row[2]), 1),  # Převod na float
                 }
                 for row in data
             ],
