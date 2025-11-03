@@ -1,10 +1,11 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import threading
 import adafruit_dht
 import board
 import time
 import sqlite3
 from datetime import datetime
+import gpiozero
 
 app = Flask(__name__)
 
@@ -14,6 +15,7 @@ DB_NAME = "DU_lekce_8/sensor_data.db"
 
 # Na RPi4/5 je často nutné use_pulseio=False
 dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
+led = gpiozero.LED(15)  # LED připojená na GPIO15
 
 
 # Inicializace databáze
@@ -48,7 +50,6 @@ def read_dht():
 
 # ukládání dat do databáze
 def save_to_database():
-    """Ukládání dat do databáze každých 10 sekund"""
     while True:
         try:
             temp, hum = read_dht()
@@ -84,13 +85,13 @@ def get_latest_data():
 
 
 # Hlavní stránka
-@app.route("/")
+@app.get("/")
 def index():
     return render_template("index.html")
 
 
 # API endpoint pro získání dat
-@app.route("/api/data")
+@app.get("/api/data")
 def get_data():
     data = get_latest_data()
     if data:
@@ -109,6 +110,23 @@ def get_data():
         }
         return jsonify(latest)
     return jsonify({"error": "Žádná data"})
+
+
+@app.post("/api/led")
+def control_led():
+    try:
+        state = request.json.get("state")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 415
+
+    if state == "on":
+        led.on()
+        return jsonify({"status": "LED zapnuta"})
+    elif state == "off":
+        led.off()
+        return jsonify({"status": "LED vypnuta"})
+    else:
+        return jsonify({"error": "Neplatný stav"}), 400
 
 
 if __name__ == "__main__":
