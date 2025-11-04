@@ -75,6 +75,122 @@
             margin-top: 10px;
         }
         
+        /* LED ovládání */
+        .led-control {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .led-control h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .radio-group label {
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .radio-group input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .radio-group span {
+            display: inline-block;
+            padding: 10px 25px;
+            background: #f5f5f5;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .radio-group input[type="radio"]:checked + span {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .radio-group label:hover span {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .range-container {
+            margin-top: 20px;
+        }
+        
+        .range-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .range-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+        
         .history {
             background: white;
             border-radius: 15px;
@@ -167,6 +283,33 @@
             </div>
         </div>
         
+        <div class="led-control">
+            <h2>💡 Ovládání LED</h2>
+            
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="led-mode" value="on">
+                    <span>Zapnuto</span>
+                </label>
+                <label>
+                    <input type="radio" name="led-mode" value="auto">
+                    <span>Auto</span>
+                </label>
+                <label>
+                    <input type="radio" name="led-mode" value="off" checked>
+                    <span>Vypnuto</span>
+                </label>
+            </div>
+            
+            <div class="range-container">
+                <div class="range-label">
+                    <span>Cílová teplota (Auto režim)</span>
+                    <span class="range-value"><span id="range-display">22</span>°C</span>
+                </div>
+                <input type="range" id="led-range" min="10" max="36" value="22" step="2">
+            </div>
+        </div>
+
         <div class="history">
             <h2>Historie měření</h2>
             <table>
@@ -188,36 +331,85 @@
     
     <script>
         async function updateData() {
-                    const response = await fetch('/api/data');  // Načtení celé stránky
-                    const data = await response.json();
+            const response = await fetch('/api/data');
+            const data = await response.json();
 
-                    // Aktualizace aktuálních hodnot
-                    document.getElementById('temperature').textContent = data.temperature;
-                    document.getElementById('humidity').textContent = data.humidity;
-                    document.getElementById('temp-time').textContent = data.timestamp;
-                    document.getElementById('hum-time').textContent = data.timestamp;
+            // Aktualizace aktuálních hodnot
+            document.getElementById('temperature').textContent = data.temperature;
+            document.getElementById('humidity').textContent = data.humidity;
+            document.getElementById('temp-time').textContent = data.timestamp;
+            document.getElementById('hum-time').textContent = data.timestamp;
 
-                    // Aktualizace historie
-                    const historyBody = document.getElementById('history-body');
-                    historyBody.innerHTML = '';
-                    
-                    data.history.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.timestamp}</td>
-                            <td>${item.temperature}</td>
-                            <td>${item.humidity}</td>
-                        `;
-                        historyBody.appendChild(row);
-                    });
+            // Aktualizace historie
+            const historyBody = document.getElementById('history-body');
+            historyBody.innerHTML = '';
+            
+            data.history.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.timestamp}</td>
+                    <td>${item.temperature}</td>
+                    <td>${item.humidity}</td>
+                `;
+                historyBody.appendChild(row);
+            });
+        }
+        
+        setInterval(updateData, 5000);
 
-                }
-                setInterval(updateData, 5000);  // Aktualizace každých 5 sekund
-
-              
-        // První načtení při startu
+        // Počáteční načtení dat
         updateData();
         
-     </script>
+        // Ovládání LED
+        addEventListener('load', () => {
+            const radioButtons = document.querySelectorAll('input[name="led-mode"]');
+            const rangeInput = document.getElementById('led-range');
+            const display = document.getElementById('range-display');
+            
+            // Aktualizace zobrazení hodnoty při pohybu slideru
+            rangeInput.addEventListener('input', () => {
+                display.textContent = rangeInput.value;
+            });
+            
+            // Listener pro všechny radio buttony
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', async () => {
+                    let state;
+                    const selectedValue = document.querySelector('input[name="led-mode"]:checked').value;
+                    
+                    if (selectedValue === 'on') {
+                        state = 'on';
+                    } else if (selectedValue === 'off') {
+                        state = 'off';
+                    } else if (selectedValue === 'auto') {
+                        state = parseInt(rangeInput.value);
+                    }
+                    
+                    await fetch('/api/led', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ state })
+                    });
+                });
+            });
+            
+            // Listener pro range
+            rangeInput.addEventListener('change', async () => {
+                const selectedMode = document.querySelector('input[name="led-mode"]:checked').value;
+                
+                if (selectedMode === 'auto') {
+                    await fetch('/api/led', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ state: parseInt(rangeInput.value) })
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
