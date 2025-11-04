@@ -10,7 +10,7 @@ import gpiozero
 app = Flask(__name__)
 
 # Konfigurace databáze
-DB_NAME = "DU_lekce_8/sensor_data.db"
+DB_NAME = "/home/dzymator/Documents/Raspberry_ukoly/DU_lekce_8/sensor_data.db"
 
 # Na RPi4/5 je často nutné use_pulseio=False
 dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
