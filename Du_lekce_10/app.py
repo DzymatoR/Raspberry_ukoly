@@ -269,4 +269,4 @@ if __name__ == "__main__":
     led_thread.start()
 
     # Spuštění Flask aplikace
-    app.run(debug=True, use_reloader=False, port=1234)
+    app.run(debug=True, use_reloader=False, port=5000)
