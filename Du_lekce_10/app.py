@@ -8,8 +8,17 @@ from datetime import datetime
 import gpiozero
 import plotly.express as px
 import pandas as pd
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+auth = HTTPBasicAuth()
+
+# Uživatelské účty (v produkci by měly být v databázi)
+users = {
+    "admin": generate_password_hash("heslo123"),
+    "user": generate_password_hash("user123"),
+}
 
 # Konfigurace databáze
 DB_NAME = "/home/dzymator/Documents/Raspberry_ukoly/Du_lekce_10/sensor_data.db"
@@ -111,6 +120,14 @@ def led_controller():
             time.sleep(1)
 
 
+# Verifikační funkce pro HTTP Basic Auth
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and check_password_hash(users.get(username), password):
+        return username
+    return None
+
+
 # Načtení posledních dat z databáze
 def get_latest_data():
     conn = sqlite3.connect(DB_NAME)
@@ -125,12 +142,14 @@ def get_latest_data():
 
 # Hlavní stránka
 @app.get("/")
+@auth.login_required
 def index():
     return render_template("index.html", sensor_graph=graph())
 
 
 # API endpoint pro získání dat
 @app.get("/api/data")
+@auth.login_required
 def get_data():
     data = get_latest_data()
     if data:
@@ -153,6 +172,7 @@ def get_data():
 
 # API endpoint pro ovládání LED
 @app.post("/api/led")
+@auth.login_required
 def control_led():
     global led_mode  # Přístup k globální proměnné
 
@@ -179,6 +199,7 @@ def control_led():
 
 # plotly graph to html route
 @app.route("/api/graph")
+@auth.login_required
 def graph():
     with sqlite3.connect(DB_NAME) as conn:
         df = pd.read_sql_query(
