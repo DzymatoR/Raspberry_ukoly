@@ -1,0 +1,7 @@
+Flask==3.0.0
+adafruit-circuitpython-dht==4.0.3
+gpiozero==2.0.1
+plotly==5.18.0
+pandas==2.1.4
+Flask-HTTPAuth==4.8.0
+Werkzeug==3.0.1
