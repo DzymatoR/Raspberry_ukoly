@@ -282,7 +282,11 @@
         <div class="status-dot"></div>
         <span>Aktualizace každé 2 minuty</span>
     </div>
-    
+
+    <div class="status" style="top: 70px;">
+        <span>👤 {{ username }} ({{ role }})</span>
+    </div>
+
     <div class="container">
         <h1>📊 Monitorování senzorů</h1>
         
@@ -301,10 +305,11 @@
                 <div class="card-time" id="hum-time">Načítání...</div>
             </div>
         </div>
-        
+
+        {% if permissions.can_control_led %}
         <div class="led-control">
             <h2>💡 Ovládání LED</h2>
-            
+
             <div class="radio-group">
                 <label>
                     <input type="radio" name="led-mode" value="on">
@@ -319,7 +324,7 @@
                     <span>Vypnuto</span>
                 </label>
             </div>
-            
+
             <div class="range-container">
                 <div class="range-label">
                     <span>Cílová teplota (Auto režim)</span>
@@ -328,12 +333,30 @@
                 <input type="range" id="led-range" min="10" max="36" value="22" step="2">
             </div>
         </div>
+        {% else %}
+        <div class="led-control">
+            <h2>💡 Ovládání LED</h2>
+            <p style="color: #999; text-align: center; padding: 20px;">
+                Nemáte oprávnění k ovládání LED. Kontaktujte administrátora pro přístup.
+            </p>
+        </div>
+        {% endif %}
 
+        {% if permissions.can_view_graph %}
         <div class="sensor-graph">
             <h2>Graf senzorových dat (den)</h2>
             <iframe id="graph-frame" src="/api/graph" style="width:100%; height:640px; border:0;"></iframe>
         </div>
+        {% else %}
+        <div class="sensor-graph">
+            <h2>Graf senzorových dat (den)</h2>
+            <p style="color: #999; text-align: center; padding: 20px;">
+                Nemáte oprávnění k zobrazení grafu. Kontaktujte administrátora pro přístup.
+            </p>
+        </div>
+        {% endif %}
 
+        {% if permissions.can_view_history %}
         <div class="history">
             <h2>Historie měření</h2>
             <table>
@@ -351,18 +374,33 @@
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="history">
+            <h2>Historie měření</h2>
+            <p style="color: #999; text-align: center; padding: 20px;">
+                Nemáte oprávnění k zobrazení historie. Kontaktujte administrátora pro přístup.
+            </p>
+        </div>
+        {% endif %}
     </div>
     
     <script>
+        // Uživatelská oprávnění z backendu
+        const permissions = {
+            can_view_history: {{ permissions.can_view_history|tojson }},
+            can_view_graph: {{ permissions.can_view_graph|tojson }},
+            can_control_led: {{ permissions.can_control_led|tojson }}
+        };
 
         // aktualizace grafu;
-
+        {% if permissions.can_view_graph %}
         function updateGraph() {
             const frame = document.getElementById('graph-frame');
             // cache-buster, aby si prohlížeč nesahal do cache
             frame.src = '/api/graph?ts=' + Date.now();
         }
         setInterval(updateGraph, 120000); // Aktualizace každé 2 minuty (120000 ms)
+        {% endif %}
                 
 
         async function updateData() {
@@ -375,43 +413,46 @@
             document.getElementById('temp-time').textContent = data.timestamp;
             document.getElementById('hum-time').textContent = data.timestamp;
 
-            // Aktualizace historie
-            const historyBody = document.getElementById('history-body');
-            historyBody.innerHTML = '';
-            
-            data.history.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.timestamp}</td>
-                    <td>${item.temperature}</td>
-                    <td>${item.humidity}</td>
-                `;
-                historyBody.appendChild(row);
-            });
+            // Aktualizace historie (pouze pokud má uživatel oprávnění)
+            if (permissions.can_view_history) {
+                const historyBody = document.getElementById('history-body');
+                historyBody.innerHTML = '';
+
+                data.history.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.timestamp}</td>
+                        <td>${item.temperature}</td>
+                        <td>${item.humidity}</td>
+                    `;
+                    historyBody.appendChild(row);
+                });
+            }
         }
 
         setInterval(updateData, 120000); // Aktualizace každé 2 minuty (120000 ms)
 
         // Počáteční načtení dat
         updateData();
-        
-        // Ovládání LED
+
+        // Ovládání LED (pouze pokud má uživatel oprávnění)
+        {% if permissions.can_control_led %}
         addEventListener('load', () => {
             const radioButtons = document.querySelectorAll('input[name="led-mode"]');
             const rangeInput = document.getElementById('led-range');
             const display = document.getElementById('range-display');
-            
+
             // Aktualizace zobrazení hodnoty při pohybu slideru
             rangeInput.addEventListener('input', () => {
                 display.textContent = rangeInput.value;
             });
-            
+
             // Listener pro všechny radio buttony
             radioButtons.forEach(radio => {
                 radio.addEventListener('change', async () => {
                     let state;
                     const selectedValue = document.querySelector('input[name="led-mode"]:checked').value;
-                    
+
                     if (selectedValue === 'on') {
                         state = 'on';
                     } else if (selectedValue === 'off') {
@@ -419,7 +460,7 @@
                     } else if (selectedValue === 'auto') {
                         state = parseInt(rangeInput.value);
                     }
-                    
+
                     await fetch('/api/led', {
                         method: 'POST',
                         headers: {
@@ -429,11 +470,11 @@
                     });
                 });
             });
-            
+
             // Listener pro range
             rangeInput.addEventListener('change', async () => {
                 const selectedMode = document.querySelector('input[name="led-mode"]:checked').value;
-                
+
                 if (selectedMode === 'auto') {
                     await fetch('/api/led', {
                         method: 'POST',
@@ -445,6 +486,7 @@
                 }
             });
         });
+        {% endif %}
     </script>
 </body>
 </html>
