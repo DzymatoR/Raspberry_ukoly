@@ -9,7 +9,7 @@ import gpiozero
 import plotly.express as px
 import pandas as pd
 from flask_httpauth import HTTPBasicAuth
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 from systemd import daemon
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -48,10 +48,47 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# Uživatelské účty (v produkci by měly být v databázi)
+# Uživatelské účty s rolemi
+# Struktura: username -> {"password_hash": hash, "role": role}
+# Role: "admin", "user", "viewer"
 users = {
-    "admin": generate_password_hash("heslo123"),
-    "user": generate_password_hash("user123"),
+    "admin": {
+        "password_hash": "pbkdf2:sha256:260000$1OQAf9UpDgDVdwIk$056529a4afe4b8aff6df05ba14df5cedf26a4cc3395255fbe45470ed9f13646d",
+        "role": "admin"
+    },
+    "user": {
+        "password_hash": "pbkdf2:sha256:260000$wLlXZ2evlh7rXZPa$ca7528424a497fa54690abf3281df93161ce5f7583871c30d2a318d502a52226",
+        "role": "user"
+    },
+    "viewer": {
+        "password_hash": "pbkdf2:sha256:260000$B5WwL3kdUgPmzExN$6cc3e014127746cd9deccfe9ee8914b9e2ea1a537a6a598a2a18df74d2420839",
+        "role": "viewer"
+    },
+}
+
+# Definice rolí a jejich oprávnění
+ROLES = {
+    "admin": {
+        "can_view_data": True,
+        "can_view_history": True,
+        "can_view_graph": True,
+        "can_control_led": True,
+        "description": "Plný přístup ke všem funkcím"
+    },
+    "user": {
+        "can_view_data": True,
+        "can_view_history": True,
+        "can_view_graph": True,
+        "can_control_led": False,
+        "description": "Čtení dat a historie (bez ovládání LED)"
+    },
+    "viewer": {
+        "can_view_data": True,
+        "can_view_history": False,
+        "can_view_graph": False,
+        "can_control_led": False,
+        "description": "Pouze aktuální data"
+    },
 }
 
 # Konfigurace databáze
@@ -203,9 +240,42 @@ def watchdog_notify():
 # Verifikační funkce pro HTTP Basic Auth
 @auth.verify_password
 def verify_password(username, password):
-    if username in users and check_password_hash(users.get(username), password):
-        return username
+    if username in users:
+        user_data = users[username]
+        if check_password_hash(user_data["password_hash"], password):
+            return username
     return None
+
+
+# Pomocné funkce pro RBAC
+def get_user_role(username):
+    """Vrátí roli uživatele"""
+    if username in users:
+        return users[username]["role"]
+    return None
+
+
+def has_permission(username, permission):
+    """Zkontroluje, zda má uživatel dané oprávnění"""
+    role = get_user_role(username)
+    if role and role in ROLES:
+        return ROLES[role].get(permission, False)
+    return False
+
+
+def require_permission(permission):
+    """Dekorátor pro kontrolu oprávnění"""
+    def decorator(f):
+        from functools import wraps
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            username = auth.current_user()
+            if not has_permission(username, permission):
+                logger.warning(f"Zamítnut přístup pro {username} - chybí oprávnění: {permission}")
+                return jsonify({"error": "Nemáte oprávnění k této akci"}), 403
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 
 # Načtení posledních dat z databáze
@@ -224,28 +294,49 @@ def get_latest_data():
 @app.get("/")
 @auth.login_required
 def index():
-    return render_template("index.html", sensor_graph=graph())
+    username = auth.current_user()
+    role = get_user_role(username)
+    permissions = ROLES.get(role, {})
+
+    return render_template(
+        "index.html",
+        username=username,
+        role=role,
+        permissions=permissions,
+    )
 
 
 # API endpoint pro získání dat
 @app.get("/api/data")
 @auth.login_required
+@require_permission("can_view_data")
 def get_data():
+    username = auth.current_user()
     data = get_latest_data()
+
     if data:
+        # Základní data pro všechny
         latest = {
             "timestamp": data[0][0],
             "temperature": round(float(data[0][1]), 1),
             "humidity": round(float(data[0][2]), 1),
-            "history": [
+            "user": username,
+            "role": get_user_role(username),
+        }
+
+        # Historie jen pro uživatele s oprávněním
+        if has_permission(username, "can_view_history"):
+            latest["history"] = [
                 {
                     "timestamp": row[0],
                     "temperature": round(float(row[1]), 1),
                     "humidity": round(float(row[2]), 1),
                 }
                 for row in data
-            ],
-        }
+            ]
+        else:
+            latest["history"] = []
+
         return jsonify(latest)
     return jsonify({"error": "Žádná data"})
 
@@ -253,8 +344,10 @@ def get_data():
 # API endpoint pro ovládání LED
 @app.post("/api/led")
 @auth.login_required
+@require_permission("can_control_led")
 def control_led():
     global led_mode  # Přístup k globální proměnné
+    username = auth.current_user()
 
     # Získání požadavku
     try:
@@ -267,15 +360,15 @@ def control_led():
     with led_lock:
         if state == "on":
             led_mode = "on"
-            logger.info("Režim LED změněn na: ON (manuální)")
+            logger.info(f"Režim LED změněn na: ON (manuální) - uživatel: {username}")
             return jsonify({"status": "LED zapnuta"})
         elif state == "off":
             led_mode = "off"
-            logger.info("Režim LED změněn na: OFF (manuální)")
+            logger.info(f"Režim LED změněn na: OFF (manuální) - uživatel: {username}")
             return jsonify({"status": "LED vypnuta"})
         elif isinstance(state, int) and 10 <= state <= 35:
             led_mode = state
-            logger.info(f"Režim LED změněn na: AUTO ({state}°C)")
+            logger.info(f"Režim LED změněn na: AUTO ({state}°C) - uživatel: {username}")
             return jsonify({"status": f"LED auto režim na {state}°C"})
         else:
             logger.warning(f"Neplatný požadavek na změnu LED režimu: {state}")
@@ -285,6 +378,7 @@ def control_led():
 # plotly graph to html route
 @app.route("/api/graph")
 @auth.login_required
+@require_permission("can_view_graph")
 def graph():
     with sqlite3.connect(DB_NAME) as conn:
         df = pd.read_sql_query(
