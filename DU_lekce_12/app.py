@@ -116,7 +116,7 @@ def save_to_database():
         except Exception as e:
             logger.error(f"Chyba při ukládání do databáze: {e}")
 
-        time.sleep(2)  # Čekat 2 sekundy před dalším čtením
+        time.sleep(30)  # Čekat 30 sekund před dalším čtením
 
 
 # Vlákno pro ovládání LED s termostatem
@@ -290,7 +290,7 @@ def graph():
         df = pd.read_sql_query(
             """SELECT timestamp, temperature, humidity
                FROM sensor_readings
-               WHERE datetime(timestamp) >= datetime('now', '-1 hour')
+               WHERE datetime(timestamp) >= datetime('now', '-1 day')
                ORDER BY timestamp ASC""",
             conn,
         )

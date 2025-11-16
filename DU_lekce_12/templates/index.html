@@ -280,7 +280,7 @@
 <body>
     <div class="status">
         <div class="status-dot"></div>
-        <span>Aktualizace každé 5s</span>
+        <span>Aktualizace každé 2 minuty</span>
     </div>
     
     <div class="container">
@@ -330,11 +330,8 @@
         </div>
 
         <div class="sensor-graph">
-            <div class="sensor-graph">
-                 <h2>Graf senzorových dat (hodina)</h2>
-                <iframe id="graph-frame" src="/api/graph" style="width:100%; height:640px; border:0;"></iframe>
-        </div>
-
+            <h2>Graf senzorových dat (den)</h2>
+            <iframe id="graph-frame" src="/api/graph" style="width:100%; height:640px; border:0;"></iframe>
         </div>
 
         <div class="history">
@@ -365,7 +362,7 @@
             // cache-buster, aby si prohlížeč nesahal do cache
             frame.src = '/api/graph?ts=' + Date.now();
         }
-        setInterval(updateGraph, 10000);
+        setInterval(updateGraph, 120000); // Aktualizace každé 2 minuty (120000 ms)
                 
 
         async function updateData() {
@@ -392,8 +389,8 @@
                 historyBody.appendChild(row);
             });
         }
-        
-        setInterval(updateData, 5000);
+
+        setInterval(updateData, 120000); // Aktualizace každé 2 minuty (120000 ms)
 
         // Počáteční načtení dat
         updateData();
