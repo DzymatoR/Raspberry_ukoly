@@ -4,15 +4,49 @@ import adafruit_dht
 import board
 import time
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import gpiozero
 import plotly.express as px
 import pandas as pd
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
+from systemd import daemon
+import logging
+from logging.handlers import TimedRotatingFileHandler
+import os
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
+
+# Konfigurace loggeru
+LOG_DIR = "/home/dzymator/Documents/Raspberry_ukoly/DU_lekce_12/logs"
+LOG_FILE = os.path.join(LOG_DIR, "app.log")
+
+# Vytvoření složky pro logy, pokud neexistuje
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Nastavení loggeru
+logger = logging.getLogger("SensorApp")
+logger.setLevel(logging.INFO)
+
+# Handler pro rotaci logů každý den, uchovávat 30 dní
+file_handler = TimedRotatingFileHandler(
+    LOG_FILE, when="midnight", interval=1, backupCount=30, encoding="utf-8"
+)
+file_handler.setLevel(logging.INFO)
+
+# Formát logu
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(formatter)
+
+# Přidat handler do loggeru
+logger.addHandler(file_handler)
+
+# Console handler pro výpis do terminálu (volitelné)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 # Uživatelské účty (v produkci by měly být v databázi)
 users = {
@@ -21,7 +55,7 @@ users = {
 }
 
 # Konfigurace databáze
-DB_NAME = "/home/dzymator/Documents/Raspberry_ukoly/Du_lekce_12/sensor_data.db"
+DB_NAME = "/home/dzymator/Documents/Raspberry_ukoly/DU_lekce_12/sensor_data.db"
 
 # Na RPi4/5 je často nutné use_pulseio=False
 dht = adafruit_dht.DHT11(board.D4, use_pulseio=False)
@@ -50,8 +84,6 @@ def init_db():
 # Čtení dat ze senzoru DHT11
 def read_dht():
     try:
-        # Senzor potřebuje čas na inicializaci
-        time.sleep(2)
         t = dht.temperature
         h = dht.humidity
         return t, h
@@ -77,11 +109,12 @@ def save_to_database():
                 conn.commit()
                 conn.close()
 
-                print(
-                    f"Uloženo: {timestamp} - Teplota: {temp:.2f}°C, Vlhkost: {hum:.2f}%"
+                # Logování úspěšného uložení
+                logger.info(
+                    f"Data uložena - Teplota: {temp:.1f}°C, Vlhkost: {hum:.1f}%"
                 )
         except Exception as e:
-            print(f"Chyba při ukládání: {e}")
+            logger.error(f"Chyba při ukládání do databáze: {e}")
 
         time.sleep(2)  # Čekat 2 sekundy před dalším čtením
 
@@ -89,16 +122,25 @@ def save_to_database():
 # Vlákno pro ovládání LED s termostatem
 def led_controller():
     global led_mode
+    last_led_state = None  # Pro sledování změn stavu
 
     while True:
         try:
             with led_lock:
                 current_mode = led_mode
 
+            current_led_state = led.is_lit
+
             if current_mode == "on":
-                led.on()
+                if not current_led_state:
+                    led.on()
+                    logger.info("LED zapnuta - manuální režim")
+                    last_led_state = True
             elif current_mode == "off":
-                led.off()
+                if current_led_state:
+                    led.off()
+                    logger.info("LED vypnuta - manuální režim")
+                    last_led_state = False
             elif isinstance(current_mode, (int, float)):
                 # Auto režim - termostat s hysterezí
                 target_temp = current_mode
@@ -106,18 +148,56 @@ def led_controller():
 
                 if temp is not None:
                     if temp <= target_temp - 1:
-                        led.on()
-                        print(f"LED ON - Teplota {temp}°C <= {target_temp - 1}°C")
+                        if not current_led_state:
+                            led.on()
+                            logger.info(
+                                f"LED zapnuta - Auto režim (teplota {temp:.1f}°C <= {target_temp - 1}°C)"
+                            )
+                            last_led_state = True
                     elif temp >= target_temp + 1:
-                        led.off()
-                        print(f"LED OFF - Teplota {temp}°C >= {target_temp + 1}°C")
+                        if current_led_state:
+                            led.off()
+                            logger.info(
+                                f"LED vypnuta - Auto režim (teplota {temp:.1f}°C >= {target_temp + 1}°C)"
+                            )
+                            last_led_state = False
                     # Jinak LED zůstane ve svém stavu (hystereze)
 
             time.sleep(1)  # Kontrola každou sekundu
 
         except Exception as e:
-            print(f"Chyba v LED controlleru: {e}")
+            logger.error(f"Chyba v LED controlleru: {e}")
             time.sleep(1)
+
+
+# Vlákno pro systemd watchdog
+def watchdog_notify():
+    """Periodicky posílá watchdog notifikace do systemd"""
+    # Zjistit watchdog timeout z environment proměnné
+    watchdog_usec = os.environ.get("WATCHDOG_USEC")
+
+    if not watchdog_usec:
+        logger.info("Systemd watchdog není aktivní")
+        return
+
+    try:
+        watchdog_usec = int(watchdog_usec)
+    except ValueError:
+        logger.error(f"Neplatná hodnota WATCHDOG_USEC: {watchdog_usec}")
+        return
+
+    # Interval pro watchdog notifikace (polovina watchdog timeout)
+    interval = watchdog_usec / 2_000_000  # převod z mikrosekund na sekundy
+    logger.info(f"Systemd watchdog aktivní, interval: {interval}s")
+
+    while True:
+        try:
+            # Poslat watchdog notifikaci
+            daemon.notify("WATCHDOG=1")
+            time.sleep(interval)
+        except Exception as e:
+            logger.error(f"Chyba při posílání watchdog notifikace: {e}")
+            time.sleep(interval)
 
 
 # Verifikační funkce pro HTTP Basic Auth
@@ -180,20 +260,25 @@ def control_led():
     try:
         state = request.json.get("state")
     except Exception as e:
+        logger.error(f"Chyba při parsování požadavku na ovládání LED: {e}")
         return jsonify({"error": str(e)}), 415
 
     # Nastavení režimu LED
     with led_lock:
         if state == "on":
             led_mode = "on"
+            logger.info("Režim LED změněn na: ON (manuální)")
             return jsonify({"status": "LED zapnuta"})
         elif state == "off":
             led_mode = "off"
+            logger.info("Režim LED změněn na: OFF (manuální)")
             return jsonify({"status": "LED vypnuta"})
         elif isinstance(state, int) and 10 <= state <= 35:
             led_mode = state
+            logger.info(f"Režim LED změněn na: AUTO ({state}°C)")
             return jsonify({"status": f"LED auto režim na {state}°C"})
         else:
+            logger.warning(f"Neplatný požadavek na změnu LED režimu: {state}")
             return jsonify({"error": "Neplatný stav"}), 400
 
 
@@ -257,16 +342,41 @@ def graph():
 
 
 if __name__ == "__main__":
-    # Inicializace databáze
-    init_db()
+    try:
+        logger.info("=" * 60)
+        logger.info("Spuštění aplikace Flask Sensor Monitoring")
+        logger.info("=" * 60)
 
-    # Spuštění vlákna pro ukládání dat
-    sensor_thread = threading.Thread(target=save_to_database, daemon=True)
-    sensor_thread.start()
+        # Inicializace databáze
+        init_db()
+        logger.info("Databáze inicializována")
 
-    # Spuštění vlákna pro ovládání LED
-    led_thread = threading.Thread(target=led_controller, daemon=True)
-    led_thread.start()
+        # Spuštění vlákna pro ukládání dat
+        sensor_thread = threading.Thread(target=save_to_database, daemon=True)
+        sensor_thread.start()
+        logger.info("Vlákno pro ukládání dat spuštěno")
 
-    # Spuštění Flask aplikace
-    app.run(debug=True, use_reloader=False, port=5000)
+        # Spuštění vlákna pro ovládání LED
+        led_thread = threading.Thread(target=led_controller, daemon=True)
+        led_thread.start()
+        logger.info("Vlákno pro ovládání LED spuštěno")
+
+        # Spuštění watchdog vlákna
+        watchdog_thread = threading.Thread(target=watchdog_notify, daemon=True)
+        watchdog_thread.start()
+
+        # Notifikace systemd o úspěšném startu
+        daemon.notify("READY=1")
+        logger.info("Aplikace úspěšně spuštěna a připravena")
+
+        # Spuštění Flask aplikace
+        app.run(debug=True, use_reloader=False, port=5000)
+
+    except KeyboardInterrupt:
+        logger.info("Aplikace ukončena uživatelem (Ctrl+C)")
+    except Exception as e:
+        logger.critical(f"Kritická chyba při spuštění aplikace: {e}", exc_info=True)
+        raise
+    finally:
+        logger.info("Ukončení aplikace")
+        logger.info("=" * 60)

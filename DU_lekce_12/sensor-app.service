@@ -1,0 +1,26 @@
+[Unit]
+Description=Flask Sensor Monitoring Application
+After=network.target
+
+[Service]
+Type=notify
+User=dzymator
+WorkingDirectory=/home/dzymator/Documents/Raspberry_ukoly/DU_lekce_12
+ExecStart=/usr/bin/python3 /home/dzymator/Documents/Raspberry_ukoly/DU_lekce_12/app.py
+Restart=always
+RestartSec=5
+
+# Watchdog konfigurace
+WatchdogSec=30
+# Systemd restartuje službu, pokud nedostane notifikaci během 30 sekund
+
+# Nastavení prostředí
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONPATH=/home/dzymator/Documents/Raspberry_ukoly/.venv/lib/python3.11/site-packages"
+
+# Bezpečnostní nastavení (volitelné)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

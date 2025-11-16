@@ -1,0 +1,19 @@
+# Logy
+logs/
+*.log
+
+# Databáze
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+
+# DHT sensor named pipes
+.lgd-nfy*
