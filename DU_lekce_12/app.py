@@ -10,7 +10,7 @@ import plotly.express as px
 import pandas as pd
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
-from systemd import daemon
+from systemd import daemon  # type: ignore
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
