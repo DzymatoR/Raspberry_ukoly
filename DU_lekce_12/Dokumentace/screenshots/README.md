@@ -92,13 +92,13 @@ mogrify -quality 85 -resize 1920x1080\> *.png
 
 ## Checklist
 
-- [ ] admin-dashboard.png
-- [ ] user-dashboard.png
-- [ ] viewer-dashboard.png
-- [ ] led-control-detail.png (volitelné)
-- [ ] graph-detail.png (volitelné)
-- [ ] login-dialog.png (volitelné)
-- [ ] mobile-view.png (volitelné)
+- [x] admin-dashboard.png
+- [x] user-dashboard.png
+- [x] viewer-dashboard.png
+- [x] led-control-detail.png (volitelné)
+- [x] graph-detail.png (volitelné)
+- [x] login-dialog.png (volitelné)
+- [x] mobile-view.png (volitelné)
 
 ## Rozměry
 

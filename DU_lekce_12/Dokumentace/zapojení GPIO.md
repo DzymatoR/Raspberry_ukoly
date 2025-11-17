@@ -22,7 +22,7 @@ pin 12 - GPIO18 - červená
 
 **Funkcionalita:** 
 
-- <span style="color: blue;">Modrá LED</span> svítí, pokud je aktivní režim "AUTO"
+- <span style="color: blue;">Modrá LED</span>
 - <span style="color: orange;">Žlutá led</span> svítí, pokud v režimu "AUTO" program "dohřívá"
-- <span style="color: red;">Červená LED</span> svítí, pokud se "dohřívá" manuálmně
+- <span style="color: red;">Červená LED</span>
 

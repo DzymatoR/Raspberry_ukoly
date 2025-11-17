@@ -94,6 +94,8 @@ Dvě bílé karty s:
 
 ### LED Ovládání
 
+![LED Control Detail](screenshots/led-control-detail.png)
+
 **Pro uživatele s oprávněním:**
 
 Tři radio buttony:
@@ -114,9 +116,11 @@ Range slider (10-36°C):
 
 ### Graf
 
+![Graph Detail](screenshots/graph-detail.png)
+
 **Plotly interaktivní graf:**
 - Dvě křivky:
-  - 🟣 Teplota (°C) - fialová `#667eea`
+  - 🟣 Teplota (°C) - modrá `#667eea`
   - 🟪 Vlhkost (%) - tmavě fialová `#764ba2`
 - X osa: Čas (formát HH:MM:SS)
 - Y osa: Hodnota
@@ -148,19 +152,7 @@ Tabulka s 3 sloupci:
 
 Když uživatel navštíví aplikaci poprvé nebo se odhlásí, prohlížeč zobrazí standardní HTTP Basic Auth dialog:
 
-```
-┌─────────────────────────────────────┐
-│  Authentication Required            │
-│                                     │
-│  The server requires a username     │
-│  and password.                      │
-│                                     │
-│  Username: [___________________]    │
-│  Password: [___________________]    │
-│                                     │
-│  [ Cancel ]  [ Log In ]            │
-└─────────────────────────────────────┘
-```
+![Login Dialog](screenshots/login-dialog.png)
 
 **Testovací účty:**
 - admin / admin123
@@ -172,6 +164,8 @@ Když uživatel navštíví aplikaci poprvé nebo se odhlásí, prohlížeč zob
 ## 📱 Responzivní design
 
 Dashboard je responzivní a přizpůsobí se různým velikostem obrazovky:
+
+![Mobile View](screenshots/mobile-view.png)
 
 ### Desktop (>1000px)
 - Karty vedle sebe v mřížce

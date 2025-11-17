@@ -45,7 +45,7 @@ Tento projekt je komplexní IoT řešení pro **Raspberry Pi**, které monitoruj
 
 ## ✨ Funkce
 
-### Základní funkce (20 bodů)
+### Základní funkce
 
 #### 1. **Webový Dashboard**
 - Zobrazení aktuálních hodnot teploty a vlhkosti
@@ -86,7 +86,7 @@ Tento projekt je komplexní IoT řešení pro **Raspberry Pi**, které monitoruj
 - PBKDF2-SHA256 password hashing (260,000 iterací)
 - Bezpečné generování hesel pomocí utility skriptu
 
-### Rozšíření (10 bodů)
+### Rozšíření
 
 #### 🔒 **Role-based Access Control (RBAC)**
 
